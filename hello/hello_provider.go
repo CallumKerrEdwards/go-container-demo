@@ -1,5 +1,5 @@
 package hello
 
 func HelloWorldProvider() string {
-	return "Hello world 👋 🌍"
+	return "This is a receipt 📃"
 }

@@ -2,7 +2,7 @@ package main
 
 import (
     "fmt"
-    "github.com/CallumKerrEdwards/go/container/demo/hello"
+    "github.com/CallumKerrEdwards/go/container/receipt/hello"
     )
 
 func main() {

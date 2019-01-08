@@ -11,11 +11,18 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	container := localstack.Start()
+
+    var container string
+    if !testing.Short() {
+        container = localstack.Start()
+    }
+	
 
 	result := m.Run()
 
-	localstack.Stop(container)
+if !testing.Short() {
+        localstack.Stop(container)
+    }
 
 	os.Exit(result)
 }

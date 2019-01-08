@@ -6,12 +6,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestHelloWorldProvider(t *testing.T) {
+func TestMessageProvider(t *testing.T) {
 	//given
 	expected := "This is a receipt 📃"
 
 	//when
-	actual := HelloWorldProvider()
+	actual := MessageProvider()
 
 	//then
 	assert.Equal(t, expected, actual, "A notice of receipt")

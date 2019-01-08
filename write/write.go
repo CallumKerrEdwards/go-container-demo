@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 )
 
+// Writes the provided file to S3 in the provided bucket
 func ToS3(sess *session.Session, bucket string, fileContent string) {
 
 	fmt.Printf("Session %v, bucketName %v, file content %v\n", *sess.Config.Endpoint, bucket, fileContent)

@@ -1,17 +1,24 @@
 package integration
 
 import (
+	"os"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/CallumKerrEdwards/go/container/receipt/localstack"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/sns"
 	"github.com/aws/aws-sdk-go/service/sqs"
 )
 
-var testCredentials = credentials.NewStaticCredentials("AKID", "SECRET", "SESSION")
+func TestMain(m *testing.M) {
+	container := localstack.Start()
+
+	result := m.Run()
+
+	localstack.Stop(container)
+
+	os.Exit(result)
+}
 
 func TestLocalstackS3Started(t *testing.T) {
 	if testing.Short() {
@@ -20,25 +27,17 @@ func TestLocalstackS3Started(t *testing.T) {
 
 	//given
 	//AWS session
-	sess, err := session.NewSession(&aws.Config{
-		Credentials: testCredentials,
-		Region:      aws.String("eu-west-1"),
-		Endpoint:    aws.String("http://localhost:4572"),
-		DisableSSL:  aws.Bool(true),
-	})
-	if err != nil {
-		t.Errorf("Unable to create AWS session, %v", err)
-	}
+	sess := localstack.S3Session()
 
 	//when
-	//Create S3 service client
+	//Create S3 service client and call the list bucket API
 	s3Client := s3.New(sess)
+	_, err := s3Client.ListBuckets(nil)
 
 	//then
-	//S3 API is able to list buckets
-	_, err2 := s3Client.ListBuckets(nil)
-	if err2 != nil {
-		t.Errorf("Unable to list buckets, %v", err2)
+	//API did not produce an error
+	if err != nil {
+		t.Errorf("Unable to list buckets, %v", err)
 	}
 }
 
@@ -49,25 +48,17 @@ func TestLocalstackSQSStarted(t *testing.T) {
 
 	//given
 	//AWS session
-	sess, err := session.NewSession(&aws.Config{
-		Credentials: testCredentials,
-		Region:      aws.String("eu-west-1"),
-		Endpoint:    aws.String("http://localhost:4576"),
-		DisableSSL:  aws.Bool(true),
-	})
-	if err != nil {
-		t.Errorf("Unable to create AWS session, %v", err)
-	}
+	sess := localstack.SQSSession()
 
 	//when
-	//Create SQS client
+	//Create SQS client cand call the list queues API
 	sqsClient := sqs.New(sess)
+	_, err := sqsClient.ListQueues(nil)
 
 	//then
-	//SQS API is able to list queues
-	_, err2 := sqsClient.ListQueues(nil)
-	if err2 != nil {
-		t.Errorf("Unable to list queues, %v", err2)
+	//API did not produce an error
+	if err != nil {
+		t.Errorf("Unable to list queues, %v", err)
 	}
 }
 
@@ -78,26 +69,16 @@ func TestLocalstackSNSStarted(t *testing.T) {
 
 	//given
 	//AWS session
-	sess, err := session.NewSession(&aws.Config{
-		Credentials: testCredentials,
-		Region:      aws.String("eu-west-1"),
-		Endpoint:    aws.String("http://localhost:4575"),
-		DisableSSL:  aws.Bool(true),
-	})
-	if err != nil {
-		t.Errorf("Unable to create AWS session, %v", err)
-	}
+	sess := localstack.SNSSession()
 
 	//when
-	//Create SNS client
+	//Create SNS client and call the list topics API
 	snsClient := sns.New(sess)
+	_, err := snsClient.ListTopics(&sns.ListTopicsInput{})
 
 	//then
-	//SNS API is able to list topics
-
-	params := &sns.ListTopicsInput{}
-	_, err2 := snsClient.ListTopics(params)
-	if err2 != nil {
-		t.Errorf("expect no error, got %v", err2)
+	//API did not produce an error
+	if err != nil {
+		t.Errorf("expect no error, got %v", err)
 	}
 }

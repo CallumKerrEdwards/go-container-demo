@@ -1,6 +1,10 @@
 package hello
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
 
 func TestHelloWorldProvider(t *testing.T) {
 	//given
@@ -10,7 +14,5 @@ func TestHelloWorldProvider(t *testing.T) {
 	actual := HelloWorldProvider()
 
 	//then
-	if actual != expected {
-		t.Errorf("Result '%s' was not the expected result '%s'", actual, expected)
-	}
+	assert.Equal(t, expected, actual, "A notice of receipt")
 }

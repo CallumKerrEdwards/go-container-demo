@@ -4,25 +4,25 @@ import (
 	"os"
 	"testing"
 
-	"github.com/CallumKerrEdwards/go/container/receipt/localstack"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/sns"
 	"github.com/aws/aws-sdk-go/service/sqs"
+	"github.com/callumkerredwards/receipt/localstack"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestMain(m *testing.M) {
 
-    var container string
-    if !testing.Short() {
-        container = localstack.Start()
-    }
-	
+	var container string
+	if !testing.Short() {
+		container = localstack.Start()
+	}
 
 	result := m.Run()
 
-if !testing.Short() {
-        localstack.Stop(container)
-    }
+	if !testing.Short() {
+		localstack.Stop(container)
+	}
 
 	os.Exit(result)
 }
@@ -43,9 +43,7 @@ func TestLocalstackS3Started(t *testing.T) {
 
 	//then
 	//API did not produce an error
-	if err != nil {
-		t.Errorf("Unable to list buckets, %v", err)
-	}
+	assert.Nil(t, err, "ListBuckets API should not produce an error")
 }
 
 func TestLocalstackSQSStarted(t *testing.T) {
@@ -64,9 +62,7 @@ func TestLocalstackSQSStarted(t *testing.T) {
 
 	//then
 	//API did not produce an error
-	if err != nil {
-		t.Errorf("Unable to list queues, %v", err)
-	}
+	assert.Nil(t, err, "ListQueues API should not produce an error")
 }
 
 func TestLocalstackSNSStarted(t *testing.T) {
@@ -85,7 +81,5 @@ func TestLocalstackSNSStarted(t *testing.T) {
 
 	//then
 	//API did not produce an error
-	if err != nil {
-		t.Errorf("expect no error, got %v", err)
-	}
+	assert.Nil(t, err, "ListTopics API should not produce an error")
 }

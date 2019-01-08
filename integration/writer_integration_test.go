@@ -1,8 +1,8 @@
 package integration
 
 import (
-	"os"
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -45,10 +45,10 @@ func TestWriteToS3CreatesBucket(t *testing.T) {
 }
 
 func getListOfBuckets(s3Client *s3.S3) []string {
-    result, err := s3Client.ListBuckets(nil)
+	result, err := s3Client.ListBuckets(nil)
 	if err != nil {
-        exitErrorf("Unable to list buckets, %v", err)
-    }
+		exitErrorf("Unable to list buckets, %v", err)
+	}
 
 	names := make([]string, 0, len(result.Buckets))
 	for _, b := range result.Buckets {
@@ -58,6 +58,6 @@ func getListOfBuckets(s3Client *s3.S3) []string {
 }
 
 func exitErrorf(msg string, args ...interface{}) {
-    fmt.Fprintf(os.Stderr, msg+"\n", args...)
-    os.Exit(1)
+	fmt.Fprintf(os.Stderr, msg+"\n", args...)
+	os.Exit(1)
 }

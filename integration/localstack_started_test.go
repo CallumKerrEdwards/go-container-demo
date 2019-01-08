@@ -1,9 +1,7 @@
 package integration
 
 import (
-	"context"
 	"testing"
-	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -96,11 +94,9 @@ func TestLocalstackSNSStarted(t *testing.T) {
 
 	//then
 	//SNS API is able to list topics
-	ctx, cancelFn := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancelFn()
 
 	params := &sns.ListTopicsInput{}
-	_, err2 := snsClient.ListTopicsWithContext(ctx, params)
+	_, err2 := snsClient.ListTopics(params)
 	if err2 != nil {
 		t.Errorf("expect no error, got %v", err2)
 	}

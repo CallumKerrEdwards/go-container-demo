@@ -83,7 +83,7 @@ func TestLocalstackSNSStarted(t *testing.T) {
 	sess, err := session.NewSession(&aws.Config{
 		Credentials: testCredentials,
 		Region:      aws.String("eu-west-1"),
-		Endpoint:    aws.String("http://localhost:4576"),
+		Endpoint:    aws.String("http://localhost:4575"),
 		DisableSSL:  aws.Bool(true),
 	})
 	if err != nil {
@@ -91,7 +91,7 @@ func TestLocalstackSNSStarted(t *testing.T) {
 	}
 
 	//when
-	//Create SQS client
+	//Create SNS client
 	snsClient := sns.New(sess)
 
 	//then

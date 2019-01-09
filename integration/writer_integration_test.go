@@ -26,17 +26,17 @@ func TestWriteToS3CreatesBucket(t *testing.T) {
 	s3Client := s3.New(sess, &aws.Config{
 		S3ForcePathStyle: aws.Bool(true),
 	})
-	assert.NotContains(t, getListOfBuckets(s3Client), bucket)
-	tmpFile := writeTempFile()
+	assert.NotContains(t, getListOfBuckets(t, s3Client), bucket)
+	tmpFile := writeTempFile(t)
 	defer os.Remove(tmpFile.Name())
 
 	//when
 	err := write.ToS3(sess, bucket, tmpFile.Name())
-	defer cleanupBucket(s3Client, bucket)
+	defer cleanupBucket(t, s3Client, bucket)
 
 	//then
 	if assert.NoError(t, err) {
-		assert.Contains(t, getListOfBuckets(s3Client), bucket)
+		assert.Contains(t, getListOfBuckets(t, s3Client), bucket)
 	}
 }
 
@@ -47,7 +47,7 @@ func TestWriteToS3Fails(t *testing.T) {
 
 	//given
 	bucket := "test-bucket"
-	tmpFile := writeTempFile()
+	tmpFile := writeTempFile(t)
 	defer os.Remove(tmpFile.Name())
 
 	//when
@@ -70,22 +70,22 @@ func TestWriteToS3UploadsFile(t *testing.T) {
 	s3Client := s3.New(sess, &aws.Config{
 		S3ForcePathStyle: aws.Bool(true),
 	})
-	assert.NotContains(t, getListOfBuckets(s3Client), bucket)
-	tmpFile := writeTempFile()
+	assert.NotContains(t, getListOfBuckets(t, s3Client), bucket)
+	tmpFile := writeTempFile(t)
 	defer os.Remove(tmpFile.Name())
 
 	//when
 	err := write.ToS3(sess, bucket, tmpFile.Name())
-	defer cleanupBucket(s3Client, bucket)
+	defer cleanupBucket(t, s3Client, bucket)
 
 	//then
 	_, filename := filepath.Split(tmpFile.Name())
 	if assert.NoError(t, err) {
-		assert.Contains(t, getListOfObjectsInBuckets(s3Client, bucket), filename)
+		assert.Contains(t, getListOfObjectsInBuckets(t, s3Client, bucket), filename)
 	}
 }
 
-func writeTempFile() *os.File {
+func writeTempFile(t *testing.T) *os.File {
 	tmpFile, err := ioutil.TempFile(os.TempDir(), "testfile-")
 	if err != nil {
 		log.Panicf("Cannot create temporary file %v", err)
@@ -100,15 +100,15 @@ func writeTempFile() *os.File {
 
 	// Close the file
 	if err := tmpFile.Close(); err != nil {
-		log.Panic(err)
+		t.Error(err)
 	}
 	return tmpFile
 }
 
-func getListOfBuckets(s3Client *s3.S3) []string {
+func getListOfBuckets(t *testing.T, s3Client *s3.S3) []string {
 	result, err := s3Client.ListBuckets(nil)
 	if err != nil {
-		log.Panicf("Unable to list buckets, %v", err)
+		t.Errorf("Unable to list buckets, %v", err)
 	}
 
 	// turn slice of result buckets into a slice of bucket names
@@ -119,10 +119,10 @@ func getListOfBuckets(s3Client *s3.S3) []string {
 	return names
 }
 
-func getListOfObjectsInBuckets(s3Client *s3.S3, bucket string) []string {
+func getListOfObjectsInBuckets(t *testing.T, s3Client *s3.S3, bucket string) []string {
 	result, err := s3Client.ListObjects(&s3.ListObjectsInput{Bucket: aws.String(bucket)})
 	if err != nil {
-		log.Panicf("Unable to list buckets, %v", err)
+		t.Errorf("Unable to list objects in bucket %q, %v", bucket, err)
 	}
 
 	// turn slice of result objects into a slice of object names
@@ -133,14 +133,14 @@ func getListOfObjectsInBuckets(s3Client *s3.S3, bucket string) []string {
 	return names
 }
 
-func cleanupBucket(s3Client *s3.S3, bucket string) {
-	for _, s := range getListOfObjectsInBuckets(s3Client, bucket) {
+func cleanupBucket(t *testing.T, s3Client *s3.S3, bucket string) {
+	for _, s := range getListOfObjectsInBuckets(t, s3Client, bucket) {
 		log.Printf("Deleting %v from bucket %v", s, bucket)
 		_, err := s3Client.DeleteObject(&s3.DeleteObjectInput{
 			Bucket: aws.String(bucket),
 			Key:    aws.String(s)})
 		if err != nil {
-			log.Panicf("Unable to delete object %q from bucket %q, %v", s, bucket, err)
+			t.Errorf("Unable to delete object %q from bucket %q, %v", s, bucket, err)
 		}
 	}
 
@@ -148,14 +148,14 @@ func cleanupBucket(s3Client *s3.S3, bucket string) {
 		Bucket: aws.String(bucket),
 	})
 	if err != nil {
-		log.Panicf("Unable to delete  bucket %q, %v", bucket, err)
+		t.Errorf("Unable to delete  bucket %q, %v", bucket, err)
 	}
 
 	err = s3Client.WaitUntilBucketNotExists(&s3.HeadBucketInput{
 		Bucket: aws.String(bucket),
 	})
 	if err != nil {
-		log.Panicf("Error occurred while waiting for bucket to be deleted, %v", bucket)
+		t.Errorf("Error occurred while waiting for bucket to be deleted, %v", bucket)
 	}
 
 }

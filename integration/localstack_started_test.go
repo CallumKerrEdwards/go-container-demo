@@ -2,6 +2,7 @@ package integration
 
 import (
 	"os"
+	"log"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/service/s3"
@@ -16,9 +17,11 @@ func TestMain(m *testing.M) {
 }
 
 func testMainWrapper(m *testing.M) int {
-	var container string
 	if !testing.Short() {
-		container = localstack.Start()
+		container, err := localstack.Start()
+		if err != nil {
+		    log.Panicf("Cannot start localstack, %v", err)
+		}
 		defer localstack.Stop(container)
 	}
 	return m.Run()

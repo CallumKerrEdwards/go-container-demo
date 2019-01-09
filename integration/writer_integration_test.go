@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -22,12 +23,16 @@ func TestWriteToS3CreatesBucket(t *testing.T) {
 	//given
 	bucket := "test-bucket"
 	sess := localstack.S3Session()
-	s3Client := s3.New(sess)
+	s3Client := s3.New(sess, &aws.Config{
+		S3ForcePathStyle: aws.Bool(true),
+	})
 	assert.NotContains(t, getListOfBuckets(s3Client), bucket)
 	tmpFile := writeTempFile()
+	defer os.Remove(tmpFile.Name())
 
 	//when
-	err := write.ToS3(sess, bucket, tmpFile)
+	err := write.ToS3(sess, bucket, tmpFile.Name())
+	defer cleanupBucket(s3Client, bucket)
 
 	//then
 	if assert.NoError(t, err) {
@@ -35,7 +40,7 @@ func TestWriteToS3CreatesBucket(t *testing.T) {
 	}
 }
 
-func TestWriteToS3CreatesBucketFails(t *testing.T) {
+func TestWriteToS3Fails(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Integration tests are skipped when running tests in short mode.")
 	}
@@ -43,9 +48,10 @@ func TestWriteToS3CreatesBucketFails(t *testing.T) {
 	//given
 	bucket := "test-bucket"
 	tmpFile := writeTempFile()
+	defer os.Remove(tmpFile.Name())
 
 	//when
-	err := write.ToS3(localstack.SNSSession(), bucket, tmpFile)
+	err := write.ToS3(localstack.SNSSession(), bucket, tmpFile.Name())
 
 	//then
 	if assert.Error(t, err) {
@@ -53,18 +59,41 @@ func TestWriteToS3CreatesBucketFails(t *testing.T) {
 	}
 }
 
+func TestWriteToS3UploadsFile(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Integration tests are skipped when running tests in short mode.")
+	}
+
+	//given
+	bucket := "test-bucket"
+	sess := localstack.S3Session()
+	s3Client := s3.New(sess, &aws.Config{
+		S3ForcePathStyle: aws.Bool(true),
+	})
+	assert.NotContains(t, getListOfBuckets(s3Client), bucket)
+	tmpFile := writeTempFile()
+	defer os.Remove(tmpFile.Name())
+
+	//when
+	err := write.ToS3(sess, bucket, tmpFile.Name())
+	defer cleanupBucket(s3Client, bucket)
+
+	//then
+	_, filename := filepath.Split(tmpFile.Name())
+	if assert.NoError(t, err) {
+		assert.Contains(t, getListOfObjectsInBuckets(s3Client, bucket), filename)
+	}
+}
+
 func writeTempFile() *os.File {
-	tmpFile, err := ioutil.TempFile(os.TempDir(), "prefix-")
+	tmpFile, err := ioutil.TempFile(os.TempDir(), "testfile-")
 	if err != nil {
 		log.Panicf("Cannot create temporary file %v", err)
 	}
 
-	// Remember to clean up the file afterwards
-	defer os.Remove(tmpFile.Name())
-
 	fmt.Println("Created File: " + tmpFile.Name())
 
-	text := []byte("This is a golangcode.com example!")
+	text := []byte("Transaction data")
 	if _, err = tmpFile.Write(text); err != nil {
 		log.Panicf("Failed to write to temporary file %v", err)
 	}
@@ -82,9 +111,51 @@ func getListOfBuckets(s3Client *s3.S3) []string {
 		log.Panicf("Unable to list buckets, %v", err)
 	}
 
+	// turn slice of result buckets into a slice of bucket names
 	names := make([]string, 0, len(result.Buckets))
 	for _, b := range result.Buckets {
 		names = append(names, aws.StringValue(b.Name))
 	}
 	return names
+}
+
+func getListOfObjectsInBuckets(s3Client *s3.S3, bucket string) []string {
+	result, err := s3Client.ListObjects(&s3.ListObjectsInput{Bucket: aws.String(bucket)})
+	if err != nil {
+		log.Panicf("Unable to list buckets, %v", err)
+	}
+
+	// turn slice of result objects into a slice of object names
+	names := make([]string, 0, len(result.Contents))
+	for _, b := range result.Contents {
+		names = append(names, aws.StringValue(b.Key))
+	}
+	return names
+}
+
+func cleanupBucket(s3Client *s3.S3, bucket string) {
+	for _, s := range getListOfObjectsInBuckets(s3Client, bucket) {
+		log.Printf("Deleting %v from bucket %v", s, bucket)
+		_, err := s3Client.DeleteObject(&s3.DeleteObjectInput{
+			Bucket: aws.String(bucket),
+			Key:    aws.String(s)})
+		if err != nil {
+			log.Panicf("Unable to delete object %q from bucket %q, %v", s, bucket, err)
+		}
+	}
+
+	_, err := s3Client.DeleteBucket(&s3.DeleteBucketInput{
+		Bucket: aws.String(bucket),
+	})
+	if err != nil {
+		log.Panicf("Unable to delete  bucket %q, %v", bucket, err)
+	}
+
+	err = s3Client.WaitUntilBucketNotExists(&s3.HeadBucketInput{
+		Bucket: aws.String(bucket),
+	})
+	if err != nil {
+		log.Panicf("Error occurred while waiting for bucket to be deleted, %v", bucket)
+	}
+
 }

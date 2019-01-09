@@ -1,4 +1,4 @@
-# go-container-demo
+# Receipt
 
 A small project that I am using to learn the [Go](https://github.com/golang/go) programming language. 
 

@@ -7,39 +7,41 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/pkg/errors"
 )
 
-// Writes the provided file to S3 in the provided bucket
-func ToS3(sess *session.Session, bucket string, fileContent string) {
+// ToS3 writes the provided file to S3 in the provided bucket
+func ToS3(sess *session.Session, bucket string, file *os.File) error {
 
-	fmt.Printf("Session %v, bucketName %v, file content %v\n", *sess.Config.Endpoint, bucket, fileContent)
+	fmt.Printf("Session %v, bucketName %v, file content %s\n", *sess.Config.Endpoint, bucket, file.Name())
 
 	svc := s3.New(sess, &aws.Config{
 		S3ForcePathStyle: aws.Bool(true),
 	})
 
-	// Create the S3 Bucket
+	if err := createBucket(svc, bucket); err != nil {
+		return errors.Wrapf(err, "Unable to create bucket %q", bucket)
+	}
+	return nil
+}
+
+// Create the S3 Bucket
+func createBucket(svc *s3.S3, bucket string) error {
 	_, err := svc.CreateBucket(&s3.CreateBucketInput{
 		Bucket: aws.String(bucket),
 	})
 	if err != nil {
-		exitErrorf("Unable to create bucket %q, %v", bucket, err)
+		return err
 	}
-
-	// Wait until bucket is created before finishing
-	fmt.Printf("Waiting for bucket %q to be created...\n", bucket)
 
 	err = svc.WaitUntilBucketExists(&s3.HeadBucketInput{
 		Bucket: aws.String(bucket),
 	})
 	if err != nil {
-		exitErrorf("Error occurred while waiting for bucket to be created, %v", bucket)
+		return err
 	}
 
 	fmt.Printf("Bucket %q successfully created\n", bucket)
-}
 
-func exitErrorf(msg string, args ...interface{}) {
-	fmt.Fprintf(os.Stderr, msg+"\n", args...)
-	os.Exit(1)
+	return nil
 }

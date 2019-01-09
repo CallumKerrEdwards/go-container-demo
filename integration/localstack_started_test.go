@@ -12,19 +12,16 @@ import (
 )
 
 func TestMain(m *testing.M) {
+	os.Exit(testMainWrapper(m))
+}
 
+func testMainWrapper(m *testing.M) int {
 	var container string
 	if !testing.Short() {
 		container = localstack.Start()
+		defer localstack.Stop(container)
 	}
-
-	result := m.Run()
-
-	if !testing.Short() {
-		localstack.Stop(container)
-	}
-
-	os.Exit(result)
+	return m.Run()
 }
 
 func TestLocalstackS3Started(t *testing.T) {

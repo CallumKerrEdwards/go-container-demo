@@ -9,8 +9,8 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/callumkerredwards/receipt/localstack"
 	"github.com/callumkerredwards/receipt/write"
 	"github.com/stretchr/testify/assert"
 )
@@ -22,7 +22,15 @@ func TestWriteToS3CreatesBucket(t *testing.T) {
 
 	//given
 	bucket := "test-bucket"
-	sess := localstack.S3Session()
+	sess, err := session.NewSession(&aws.Config{
+		Credentials: testCredentials,
+		Region:      testRegion,
+		Endpoint:    aws.String("http://localhost:4572"),
+		DisableSSL:  disableSSL,
+	})
+	if err != nil {
+		t.Errorf("Could not create new AWS session: %v", err)
+	}
 	s3Client := s3.New(sess, &aws.Config{
 		S3ForcePathStyle: aws.Bool(true),
 	})
@@ -31,31 +39,12 @@ func TestWriteToS3CreatesBucket(t *testing.T) {
 	defer os.Remove(tmpFile.Name())
 
 	//when
-	err := write.ToS3(sess, bucket, tmpFile.Name())
+	err = write.ToS3(sess, bucket, tmpFile.Name())
 	defer cleanupBucket(t, s3Client, bucket)
 
 	//then
 	if assert.NoError(t, err) {
 		assert.Contains(t, getListOfBuckets(t, s3Client), bucket)
-	}
-}
-
-func TestWriteToS3Fails(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Integration tests are skipped when running tests in short mode.")
-	}
-
-	//given
-	bucket := "test-bucket"
-	tmpFile := writeTempFile(t)
-	defer os.Remove(tmpFile.Name())
-
-	//when
-	err := write.ToS3(localstack.SNSSession(), bucket, tmpFile.Name())
-
-	//then
-	if assert.Error(t, err) {
-		assert.Contains(t, err.Error(), bucket)
 	}
 }
 
@@ -66,7 +55,15 @@ func TestWriteToS3UploadsFile(t *testing.T) {
 
 	//given
 	bucket := "test-bucket"
-	sess := localstack.S3Session()
+	sess, err := session.NewSession(&aws.Config{
+		Credentials: testCredentials,
+		Region:      testRegion,
+		Endpoint:    aws.String("http://localhost:4572"),
+		DisableSSL:  disableSSL,
+	})
+	if err != nil {
+		t.Errorf("Could not create new AWS session: %v", err)
+	}
 	s3Client := s3.New(sess, &aws.Config{
 		S3ForcePathStyle: aws.Bool(true),
 	})
@@ -75,7 +72,7 @@ func TestWriteToS3UploadsFile(t *testing.T) {
 	defer os.Remove(tmpFile.Name())
 
 	//when
-	err := write.ToS3(sess, bucket, tmpFile.Name())
+	err = write.ToS3(sess, bucket, tmpFile.Name())
 	defer cleanupBucket(t, s3Client, bucket)
 
 	//then
